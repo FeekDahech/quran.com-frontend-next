@@ -1,39 +1,47 @@
 /* eslint-disable react-func/max-lines-per-function */
-import { useCallback, useContext, useEffect, useRef, useMemo } from 'react';
+import { useCallback, useContext, useEffect, useRef, useMemo } from "react";
 
-import debounce from 'lodash/debounce';
-import { shallowEqual, useDispatch, useSelector } from 'react-redux';
-import { useSWRConfig } from 'swr';
+import debounce from "lodash/debounce";
+import { shallowEqual, useDispatch, useSelector } from "react-redux";
+import { useSWRConfig } from "swr";
 
-import { useVerseTrackerContext } from '../contexts/VerseTrackerContext';
-import { getObservedVersePayload, getOptions, QURAN_READER_OBSERVER_ID } from '../observer';
+import { useVerseTrackerContext } from "../contexts/VerseTrackerContext";
+import {
+  getObservedVersePayload,
+  getOptions,
+  QURAN_READER_OBSERVER_ID,
+} from "../observer";
 
-import DataContext from '@/contexts/DataContext';
-import useGlobalIntersectionObserver from '@/hooks/useGlobalIntersectionObserver';
-import { setLastReadVerse } from '@/redux/slices/QuranReader/readingTracker';
-import { selectQuranFont, selectQuranMushafLines } from '@/redux/slices/QuranReader/styles';
+import DataContext from "@/contexts/DataContext";
+import useGlobalIntersectionObserver from "@/hooks/useGlobalIntersectionObserver";
+import { setLastReadVerse } from "@/redux/slices/QuranReader/readingTracker";
+import {
+  selectQuranFont,
+  selectQuranMushafLines,
+} from "@/redux/slices/QuranReader/styles";
 import {
   ActivityDayType,
   UpdateActivityDayBody,
   UpdateQuranActivityDayBody,
-} from '@/types/auth/ActivityDay';
-import { getFilterActivityDaysParamsOfCurrentMonth } from '@/utils/activity-day';
-import { getMushafId } from '@/utils/api';
-import { addReadingSession, updateActivityDay } from '@/utils/auth/api';
+} from "@/types/auth/ActivityDay";
+import { ReadingPreference } from "types/QuranReader";
+import { getFilterActivityDaysParamsOfCurrentMonth } from "@/utils/activity-day";
+import { getMushafId } from "@/utils/api";
+import { addReadingSession, updateActivityDay } from "@/utils/auth/api";
 import {
   makeFilterActivityDaysUrl,
   makeReadingSessionsUrl,
   makeStreakUrl,
-} from '@/utils/auth/apiPaths';
-import { isLoggedIn } from '@/utils/auth/login';
-import mergeVerseKeys from '@/utils/mergeVerseKeys';
-import { getVerseAndChapterNumbersFromKey } from '@/utils/verse';
+} from "@/utils/auth/apiPaths";
+import { isLoggedIn } from "@/utils/auth/login";
+import mergeVerseKeys from "@/utils/mergeVerseKeys";
+import { getVerseAndChapterNumbersFromKey } from "@/utils/verse";
 
 const READING_DAY_SYNC_TIME_MS = 5000; // 5 seconds
 const READING_SESSION_DEBOUNCE_WAIT_TIME = 2000; // 5 seconds
 
 interface UseSyncReadingProgressProps {
-  isReadingPreference: boolean;
+  readingPreference: ReadingPreference;
 }
 
 /**
@@ -41,7 +49,9 @@ interface UseSyncReadingProgressProps {
  *
  * @param {UseSyncReadingProgressProps} options
  */
-const useSyncReadingProgress = ({ isReadingPreference }: UseSyncReadingProgressProps) => {
+const useSyncReadingProgress = ({
+  readingPreference,
+}: UseSyncReadingProgressProps) => {
   const chaptersData = useContext(DataContext);
 
   const quranFont = useSelector(selectQuranFont, shallowEqual);
@@ -53,7 +63,8 @@ const useSyncReadingProgress = ({ isReadingPreference }: UseSyncReadingProgressP
    * we will clear the queue every {READING_DAY_SYNC_TIME} milliseconds after sending the data to the backend
    * it is also a Set not an array to avoid duplicate verse keys
    */
-  const { verseKeysQueue, shouldTrackObservedVerses } = useVerseTrackerContext();
+  const { verseKeysQueue, shouldTrackObservedVerses } =
+    useVerseTrackerContext();
 
   const elapsedReadingTimeInSeconds = useRef(0);
   const dispatch = useDispatch();
@@ -65,12 +76,16 @@ const useSyncReadingProgress = ({ isReadingPreference }: UseSyncReadingProgressP
         cache.delete(makeReadingSessionsUrl());
       });
     },
-    [cache],
+    [cache]
   );
 
   const debouncedAddReadingSession = useMemo(
-    () => debounce(addReadingSessionAndClearCache, READING_SESSION_DEBOUNCE_WAIT_TIME),
-    [addReadingSessionAndClearCache],
+    () =>
+      debounce(
+        addReadingSessionAndClearCache,
+        READING_SESSION_DEBOUNCE_WAIT_TIME
+      ),
+    [addReadingSessionAndClearCache]
   );
 
   // send the data to the backend and clear the SWR cache
@@ -79,14 +94,14 @@ const useSyncReadingProgress = ({ isReadingPreference }: UseSyncReadingProgressP
       updateActivityDay(body).then(() => {
         // invalidate the current month's history cache to refetch the data if we navigated to it
         const currentMonthHistoryUrl = makeFilterActivityDaysUrl(
-          getFilterActivityDaysParamsOfCurrentMonth(),
+          getFilterActivityDaysParamsOfCurrentMonth()
         );
         cache.delete(currentMonthHistoryUrl);
 
         mutate(makeStreakUrl());
       });
     },
-    [mutate, cache],
+    [mutate, cache]
   );
 
   // this function will be called when an element is triggered by the intersection observer
@@ -98,7 +113,7 @@ const useSyncReadingProgress = ({ isReadingPreference }: UseSyncReadingProgressP
         setLastReadVerse({
           lastReadVerse,
           chaptersData,
-        }),
+        })
       );
 
       if (isLoggedIn() && shouldTrackObservedVerses.current) {
@@ -109,12 +124,18 @@ const useSyncReadingProgress = ({ isReadingPreference }: UseSyncReadingProgressP
         verseKeysQueue.current.add(lastReadVerse.verseKey);
 
         const [chapterNumber, verseNumber] = getVerseAndChapterNumbersFromKey(
-          lastReadVerse.verseKey,
+          lastReadVerse.verseKey
         );
         debouncedAddReadingSession(Number(chapterNumber), Number(verseNumber));
       }
     },
-    [chaptersData, debouncedAddReadingSession, dispatch, verseKeysQueue, shouldTrackObservedVerses],
+    [
+      chaptersData,
+      debouncedAddReadingSession,
+      dispatch,
+      verseKeysQueue,
+      shouldTrackObservedVerses,
+    ]
   );
 
   // eslint-disable-next-line consistent-return
@@ -127,7 +148,10 @@ const useSyncReadingProgress = ({ isReadingPreference }: UseSyncReadingProgressP
 
     const interval = setInterval(() => {
       // nothing to send
-      if (verseKeysQueue.current.size === 0 && elapsedReadingTimeInSeconds.current === 0) {
+      if (
+        verseKeysQueue.current.size === 0 &&
+        elapsedReadingTimeInSeconds.current === 0
+      ) {
         return;
       }
 
@@ -188,21 +212,21 @@ const useSyncReadingProgress = ({ isReadingPreference }: UseSyncReadingProgressP
       clearInterval(interval);
     };
 
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("blur", handleBlur);
 
     handleFocus();
 
     return () => {
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("blur", handleBlur);
     };
   }, []);
 
   useGlobalIntersectionObserver(
-    getOptions(isReadingPreference),
+    getOptions(readingPreference === ReadingPreference.Reading),
     onElementVisible,
-    QURAN_READER_OBSERVER_ID,
+    QURAN_READER_OBSERVER_ID
   );
 };
 
