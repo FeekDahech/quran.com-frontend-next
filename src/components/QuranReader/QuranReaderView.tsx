@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import useSyncReadingProgress from "./hooks/useSyncReadingProgress";
 import ReadingPreferenceSwitcher from "./ReadingPreferenceSwitcher";
 import TranslationView from "./TranslationView";
+import QuizView from "./QuizView";
 
 import QuranReaderStyles from "@/redux/types/QuranReaderStyles";
 import { VersesResponse } from "types/ApiResponses";
@@ -48,7 +49,7 @@ const QuranReaderView: React.FC<Props> = ({
     return (
       <>
         <ReadingPreferenceSwitcher />
-        <TranslationView
+        <QuizView
           quranReaderStyles={quranReaderStyles}
           quranReaderDataType={quranReaderDataType}
           initialData={initialData}
