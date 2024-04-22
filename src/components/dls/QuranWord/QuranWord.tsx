@@ -136,7 +136,7 @@ const QuranWord = ({
   }, [audioService, isRecitationEnabled, word]);
 
   const shouldHandleWordClicking =
-    readingPreference === ReadingPreference.Translation && word.charTypeName !== CharType.End;
+    readingPreference !== ReadingPreference.Reading && word.charTypeName !== CharType.End;
 
   return (
     <div
@@ -158,7 +158,7 @@ const QuranWord = ({
       <Wrapper
         shouldWrap={showTooltip}
         wrapper={(children) =>
-          readingPreference === ReadingPreference.Translation ? (
+          readingPreference !== ReadingPreference.Reading ? (
             <MobilePopover
               isOpen={isAudioPlayingWord && showTooltipWhenPlayingAudio ? true : undefined}
               defaultStyling={false}
